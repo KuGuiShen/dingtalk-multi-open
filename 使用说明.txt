@@ -1,0 +1,53 @@
+钉钉多开 - 账号管理器 使用说明
+================================
+
+【程序文件】
+DingTalk多开器.exe    账号管理器（双击运行）
+DingTalk多开器.cs     界面源码
+DingTalkMultiCore.cs  多开核心引擎源码
+
+【界面功能】
+- 打开选中账号：启动该账号对应的独立钉钉实例。
+- 新建账号：自动分配新的独立数据目录（%APPDATA%\DingTalkN），
+  第一次打开时用二维码登录即可。
+- 重命名：给账号起一个好记的名字（如“工作”“生活”）。
+- 删除账号：只从列表删除，不会删除数据目录。
+- 刷新状态：重新检测各账号是否正在运行。
+- 列表中绿色 = 运行中。
+
+【支持多少个】
+理论上没有数量上限，每新建一个账号就分配一个独立数据目录，
+电脑配置足够时想开几个就开几个。
+
+【实现原理】
+新版钉钉多开有两个关键点：
+
+1. 钉钉通过命名互斥量阻止第二个进程：
+   {{239B7D43-86D5-4E5C-ADE6-CEC42155B475}}DingTalk
+   {{239B7D43-86D5-4E5C-ADE6-CEC42155B475}}DingTalk_loginframe
+   打开新账号前，程序会先关闭当前互斥量句柄（不结束旧实例）。
+
+2. 钉钉不允许两个实例共用同一份数据目录，否则新实例会顶掉旧实例。
+   程序借助 %APPDATA%\DingTalk\redirectAppData.dat 把新实例的数据
+   指向各自独立的 %APPDATA%\DingTalkN 目录；实例稳定后再还原，
+   保证以后正常双击钉钉仍使用原来的主账号数据。
+
+账号列表保存在：
+%APPDATA%\DingTalkMultiOpen\accounts.txt
+
+【注意事项】
+1. 新建账号后的第一次启动会显示登录二维码；每个账号的数据互不影响。
+2. 若提示权限不足，请右键以管理员身份运行。
+3. 若程序意外中断残留 redirectAppData.dat，删除
+   %APPDATA%\DingTalk\redirectAppData.dat 后再正常启动钉钉。
+4. 关闭账号时直接关闭对应钉钉窗口即可；不要用“结束任务”强杀。
+5. 跨进程关闭句柄可能被部分杀毒软件告警，属正常现象。
+6. 钉钉升级若更换互斥量 GUID，需同步修改 DingTalkMultiCore.cs 中的
+   MutexGuidPart 常量后重新编译。
+
+【重新编译源码】
+Windows 自带 .NET Framework 编译器，在源码目录执行：
+  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe ^
+    /nologo /platform:x64 /codepage:65001 /target:winexe ^
+    /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+    /out:DingTalk多开器.exe DingTalkMultiCore.cs DingTalk多开器.cs
